@@ -41,12 +41,172 @@ public class BitPay {
     private static final String BITPAY_API_VERSION = "2.0.0";
     private static final String BITPAY_PLUGIN_INFO = "BitPay Java Client " + BITPAY_API_VERSION;
     private static final String BITPAY_URL = "https://bitpay.com/";
+    private static final String BITPAY_TEST_URL = "https://test.bitpay.com/";
 
     public static final String FACADE_PAYROLL  = "payroll";
     public static final String FACADE_POS = "pos";
     public static final String FACADE_MERCHANT = "merchant";
     public static final String FACADE_USER = "user";
+    public static final String FACADE_ONBOARDING = "onboarding";
 
+    // Used for the /orgs endpoint
+    private String[][] _industryCode = {
+        {"BP1621", "Accounting"},
+        {"BP8293", "Airlines/Aviation"},
+        {"BP4443", "Alternative Dispute Resolution"},
+        {"BP4163", "Alternative Medicine"},
+        {"BP9372", "Animation"},
+        {"BP6770", "Apparel/Fashion"},
+        {"BP6823", "Architecture/Planning"},
+        {"BP3006", "Arts/Crafts"},
+        {"BP2459", "Automotive"},
+        {"BP0169", "Aviation/Aerospace"},
+        {"BP0683", "Banking/Mortgage"},
+        {"BP9810", "Biotechnology/Greentech"},
+        {"BP8822", "Bitcoin Mining Hardware"},
+        {"BP8452", "Bitcoin Mining Co-op"},
+        {"BP1627", "Broadcast Media"},
+        {"BP9648", "Building Materials"},
+        {"BP7908", "Business Supplies/Equipment"},
+        {"BP4175", "Capital Markets/Hedge Fund/Private Equity"},
+        {"BP1903", "Chemicals"},
+        {"BP2863", "Civic/Social Organization"},
+        {"BP6822", "Civil Engineering"},
+        {"BP1176", "Commercial Real Estate"},
+        {"BP0070", "Computer/Network Security"},
+        {"BP1060", "Computer Games"},
+        {"BP1683", "Computer Hardware"},
+        {"BP0135", "Computer Networking"},
+        {"BP4528", "Computer Software/Engineering"},
+        {"BP9823", "Construction"},
+        {"BP2835", "Consumer Electronics"},
+        {"BP0492", "Consumer Goods"},
+        {"BP5016", "Consumer Services"},
+        {"BP5268", "Cosmetics"},
+        {"BP5778", "Currency Exchange"},
+        {"BP3715", "Dairy"},
+        {"BP0793", "Defense/Space"},
+        {"BP8062", "Design"},
+        {"BP2962", "Dietary Supplements"},
+        {"BP8635", "Education Management"},
+        {"BP6150", "E-Learning"},
+        {"BP3759", "Electrical/Electronic Manufacturing"},
+        {"BP8424", "Entertainment"},
+        {"BP2769", "Entertainment - Adult"},
+        {"BP9312", "Environmental Services"},
+        {"BP9883", "Events Services"},
+        {"BP5020", "Executive Office"},
+        {"BP5203", "Facilities Services"},
+        {"BP8908", "Farming"},
+        {"BP1259", "Financial Services"},
+        {"BP0483", "Fine Art"},
+        {"BP2980", "Fishery"},
+        {"BP3789", "Food/Beverages"},
+        {"BP1083", "Food Production"},
+        {"BP2703", "Fund-Raising"},
+        {"BP8130", "Furniture"},
+        {"BP0428", "Gambling/Casinos"},
+        {"BP3492", "Glass/Ceramics/Concrete"},
+        {"BP3331", "Government Administration"},
+        {"BP5240", "Government Relations"},
+        {"BP2691", "Graphic Design/Web Design"},
+        {"BP2699", "Health/Fitness"},
+        {"BP6285", "Higher Education/Academia"},
+        {"BP6368", "Hospital/Health Care"},
+        {"BP5716", "Hospitality"},
+        {"BP7639", "Human Resources/HR"},
+        {"BP9442", "Import/Export"},
+        {"BP5884", "Individual/Family Services"},
+        {"BP0462", "Industrial Automation"},
+        {"BP9982", "Information Services"},
+        {"BP6246", "Information Technology/IT"},
+        {"BP7786", "Insurance"},
+        {"BP5144", "International Affairs"},
+        {"BP7474", "International Trade/Development"},
+        {"BP4945", "Internet"},
+        {"BP9235", "Investment Banking/Venture"},
+        {"BP6174", "Investment Management/Hedge Fund/Private Equity"},
+        {"BP5854", "Judiciary"},
+        {"BP5614", "Law Enforcement"},
+        {"BP0959", "Law Practice/Law Firms"},
+        {"BP0875", "Legal Services"},
+        {"BP0389", "Legislative Office"},
+        {"BP1152", "Leisure/Travel/Tourism"},
+        {"BP1671", "Libraries"},
+        {"BP0068", "Logistics/Supply Chain"},
+        {"BP2686", "Luxury Goods/Jewelry"},
+        {"BP8110", "Machinery"},
+        {"BP8883", "Management Consulting"},
+        {"BP6520", "Maritime"},
+        {"BP2641", "Market Research"},
+        {"BP2136", "Marketing/Advertising/Sales"},
+        {"BP5592", "Mechanical or Industrial Engineering"},
+        {"BP8891", "Media Production"},
+        {"BP4115", "Medical Devices/Equipment"},
+        {"BP2970", "Medical Practice"},
+        {"BP4178", "Mental Health Care"},
+        {"BP1043", "Military"},
+        {"BP4244", "Motion Pictures/Film"},
+        {"BP2215", "Museums/Institutions"},
+        {"BP0533", "Music"},
+        {"BP1664", "Nanotechnology"},
+        {"BP4929", "Newspapers/Journalism"},
+        {"BP5293", "Non-Profit/Volunteering"},
+        {"BP1226", "Novelties - Adult"},
+        {"BP1759", "Oil/Energy/Solar/Greentech"},
+        {"BP1376", "Online Publishing"},
+        {"BP5916", "Outsourcing/Offshoring"},
+        {"BP5206", "Package/Freight Delivery"},
+        {"BP6850", "Packaging/Containers"},
+        {"BP4340", "Paper/Forest Products"},
+        {"BP7841", "Performing Arts"},
+        {"BP7408", "Prepaid Cards/Gift Cards"},
+        {"BP7376", "Pharmaceuticals"},
+        {"BP8014", "Philanthropy"},
+        {"BP4387", "Photography"},
+        {"BP5475", "Plastics"},
+        {"BP2310", "Political Organization"},
+        {"BP0088", "Precious Metals"},
+        {"BP7297", "Primary/Secondary Education"},
+        {"BP1099", "Printing"},
+        {"BP5901", "Professional Training"},
+        {"BP9953", "Program Development"},
+        {"BP0937", "Public Policy"},
+        {"BP1761", "Public Relations/PR"},
+        {"BP7033", "Public Safety"},
+        {"BP3275", "Publishing Industry"},
+        {"BP1539", "Railroad Manufacture"},
+        {"BP8414", "Ranching"},
+        {"BP9091", "Real Estate/Mortgage"},
+        {"BP0007", "Recreational Facilities/Services"},
+        {"BP2864", "Religious Institutions"},
+        {"BP9264", "Renewables/Environment"},
+        {"BP6653", "Research Industry"},
+        {"BP2938", "Restaurants"},
+        {"BP6277", "Retail Industry"},
+        {"BP3520", "Security/Investigations"},
+        {"BP1590", "Semiconductors"},
+        {"BP1104", "Shipbuilding"},
+        {"BP7148", "Sporting Goods"},
+        {"BP3345", "Sports"},
+        {"BP3135", "Staffing/Recruiting"},
+        {"BP2620", "Supermarkets"},
+        {"BP6279", "Telecommunications"},
+        {"BP7010", "Textiles"},
+        {"BP5077", "Think Tanks"},
+        {"BP6741", "Tobacco"},
+        {"BP3367", "Translation/Localization"},
+        {"BP5132", "Transportation"},
+        {"BP4134", "Utilities"},
+        {"BP2191", "Venture Capital/VC"},
+        {"BP4737", "Veterinary"},
+        {"BP3527", "Video on Demand"},
+        {"BP7456", "Warehousing"},
+        {"BP0126", "Wholesale"},
+        {"BP3612", "Wine/Spirits"},
+        {"BP0514", "Wireless"},
+        {"BP8901", "Writing/Editing"},
+    };
     private HttpClient _httpClient = null;
     private String _baseUrl = BITPAY_URL;
     private ECKey _ecKey = null;
@@ -57,10 +217,11 @@ public class BitPay {
     private Hashtable<String, String> _tokenCache; // {facade, token}
     
     /**
-     * Constructor for use if the keys and SIN are managed by this library.
-     * @param clientName - The label for this client.
-     * @param envUrl - The target server URL.
-     * @throws BitPayException 
+     * Constructor for use the client name and target server URL strings.
+     *
+     * @param  clientName      The label for this client.
+     * @param  envUrl          The target server URL.
+     * @throws BitPayException
      */
     public BitPay(String clientName, String envUrl) throws BitPayException
     {
@@ -92,22 +253,34 @@ public class BitPay {
         this.deriveIdentity();
         this.tryGetAccessTokens();
     }
-    
+
+    /**
+     * Constructor for use with the client name string.
+     *
+     * @param  clientName      The label for this client.
+     * @throws BitPayException
+     */
     public BitPay(String clientName) throws BitPayException
     {
         this(clientName, BITPAY_URL);
     }
-    
+
+    /**
+     * Empty constructor params.
+     *
+     * @throws BitPayException
+     */
     public BitPay() throws BitPayException
     {
         this(BITPAY_PLUGIN_INFO, BITPAY_URL);
     }
 
     /**
-     * Constructor for use if the keys and SIN were derived external to this library.
-     * @param ecKey - An elliptical curve key.
-     * @param clientName - The label for this client.
-     * @param envUrl - The target server URL.
+     * Constructor for use with the keys, client name and target server URL strings.
+     *
+     * @param  ecKey           An elliptical curve key.
+     * @param  clientName      The label for this client.
+     * @param  envUrl          The target server URL.
      * @throws BitPayException
      */
     public BitPay(ECKey ecKey, String clientName, String envUrl) throws BitPayException
@@ -138,31 +311,66 @@ public class BitPay {
         this.tryGetAccessTokens();
     }
 
+    /**
+     * Constructor for use with the keys and client name string.
+     *
+     * @param  ecKey           An elliptical curve key.
+     * @param  clientName      The label for this client.
+     * @throws BitPayException
+     */
     public BitPay(ECKey ecKey, String clientName) throws BitPayException
     {
         this(ecKey, clientName, BITPAY_URL);
     }
 
+    /**
+     * Constructor for use with just the keys.
+     *
+     * @param  ecKey           An elliptical curve key.
+     * @throws BitPayException
+     */
     public BitPay(ECKey ecKey) throws BitPayException
     {
         this(ecKey, BITPAY_PLUGIN_INFO, BITPAY_URL);
     }
 
+    /**
+     * Returns the identity property string.
+     *
+     * @return _identity The identity property string.
+     */
     public String getIdentity()
     {
         return _identity;
     }
 
+    /**
+     * Used to check if nonces are disabled or not.
+     *
+     * @return _disableNonce Boolean value to check for nonce usage.
+     */
     public boolean getDisableNonce()
     {
         return _disableNonce;
     }
-    
+
+    /**
+     * Used to disable/enable nonce usage.
+     *
+     * @param value Boolean value to disable/enable nonce usage.
+     */
     public void setDisableNonce(boolean value)
     {
         _disableNonce = value;
     }
 
+    /**
+     * Pairs a client with a merchant accound. See:
+     * https://bitpay.com/api#getting-access
+     *
+     * @param  pairingCode  
+     * @throws BitPayException
+     */
     public void authorizeClient(String pairingCode) throws BitPayException
     {
         Token token = new Token();
