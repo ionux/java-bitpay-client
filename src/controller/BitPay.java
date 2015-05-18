@@ -16,6 +16,7 @@ import model.Invoice;
 import model.Rate;
 import model.Rates;
 import model.Token;
+import model.Organization;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -40,17 +41,18 @@ public class BitPay {
 
     private static final String BITPAY_API_VERSION = "2.0.0";
     private static final String BITPAY_PLUGIN_INFO = "BitPay Java Client " + BITPAY_API_VERSION;
-    private static final String BITPAY_URL = "https://bitpay.com/";
-    private static final String BITPAY_TEST_URL = "https://test.bitpay.com/";
+    private static final String BITPAY_URL         = "https://bitpay.com/";
+    private static final String BITPAY_TEST_URL    = "https://test.bitpay.com/";
 
-    public static final String FACADE_PAYROLL  = "payroll";
-    public static final String FACADE_POS = "pos";
-    public static final String FACADE_MERCHANT = "merchant";
-    public static final String FACADE_USER = "user";
+    public static final String FACADE_PAYROLL    = "payroll";
+    public static final String FACADE_POS        = "pos";
+    public static final String FACADE_MERCHANT   = "merchant";
+    public static final String FACADE_USER       = "user";
     public static final String FACADE_ONBOARDING = "onboarding";
 
-    // Used for the /orgs endpoint
-    private String[][] _industryCode = {
+    // Used for the /orgs endpoint, see:
+    // https://bitpay.com/api#references
+    public static final String[][] INDUSTRY_CODES = {
         {"BP1621", "Accounting"},
         {"BP8293", "Airlines/Aviation"},
         {"BP4443", "Alternative Dispute Resolution"},
@@ -207,13 +209,14 @@ public class BitPay {
         {"BP0514", "Wireless"},
         {"BP8901", "Writing/Editing"},
     };
+
     private HttpClient _httpClient = null;
-    private String _baseUrl = BITPAY_URL;
-    private ECKey _ecKey = null;
-    private String _identity = "";
-    private long _nonce = new Date().getTime();
-    private boolean _disableNonce = false;
-    private String _clientName = "";
+    private String _baseUrl        = BITPAY_URL;
+    private ECKey _ecKey           = null;
+    private String _identity       = "";
+    private long _nonce            = new Date().getTime();
+    private boolean _disableNonce  = false;
+    private String _clientName     = "";
     private Hashtable<String, String> _tokenCache; // {facade, token}
     
     /**
@@ -266,7 +269,7 @@ public class BitPay {
     }
 
     /**
-     * Empty constructor params.
+     * Constructor.
      *
      * @throws BitPayException
      */
@@ -365,10 +368,11 @@ public class BitPay {
     }
 
     /**
-     * Pairs a client with a merchant accound. See:
+     * Pairs a client with a merchant accound and stores
+     * all returned tokens to the token cache. See:
      * https://bitpay.com/api#getting-access
      *
-     * @param  pairingCode  
+     * @param  pairingCode     The pairing code generated for your account.
      * @throws BitPayException
      */
     public void authorizeClient(String pairingCode) throws BitPayException
@@ -379,7 +383,7 @@ public class BitPay {
         token.setNonce(getNextNonce());
         token.setPairingCode(pairingCode);
         token.setLabel(_clientName);
-        
+
         ObjectMapper mapper = new ObjectMapper();
 
         String json;
@@ -391,7 +395,7 @@ public class BitPay {
         }
 
         HttpResponse response = this.post("tokens", json);
-        
+
         List<Token> tokens;
 
         try {
@@ -407,6 +411,14 @@ public class BitPay {
         }
     }
 
+    /**
+     * Generates a pairing code for a merchant account
+     * for the requested facade type.
+     *
+     * @param  facade          Requested facade type.
+     * @return pairingCode     The returned pairing code.
+     * @throws BitPayException
+     */
     public String requestClientAuthorization(String facade) throws BitPayException
     {
         Token token = new Token();
@@ -450,11 +462,26 @@ public class BitPay {
         return tokens.get(0).getPairingCode();
     }
 
+    /**
+     * Checks to see if the token cache contains a token
+     * for the requested facade, i.e. is authorized.
+     *
+     * @param  facade  Requested facade type.
+     * @return boolean Whether or not the token cache has the key.
+     */
     public boolean clientIsAuthorized(String facade)
     {
         return _tokenCache.containsKey(facade);
     }
 
+    /**
+     * Generates a new BitPay invoice for the merchant account.
+     *
+     * @param  invoice         Instance of an invoice object.
+     * @param  facade          The facade type to use.
+     * @return invoice         The updated invoice object.
+     * @throws BitPayException
+     */
     public Invoice createInvoice(Invoice invoice, String facade) throws BitPayException
     {
         invoice.setToken(this.getAccessToken(facade));
@@ -484,11 +511,26 @@ public class BitPay {
         return invoice;
     }
 
+    /**
+     * Generates a new BitPay invoice for the merchant account.
+     * Uses the merchant facade by default.
+     *
+     * @param  invoice         Instance of an invoice object.
+     * @return invoice         The updated invoice object.
+     * @throws BitPayException
+     */
     public Invoice createInvoice(Invoice invoice) throws BitPayException
     {
         return this.createInvoice(invoice, FACADE_MERCHANT);
     }
 
+    /**
+     * Retrieves the details of an invoice.
+     *
+     * @param  invoiceId       The BitPay invoice id.
+     * @return i               The updated invoice object.
+     * @throws BitPayException
+     */
     public Invoice getInvoice(String invoiceId) throws BitPayException
     {
         HttpResponse response = this.get("invoices/" + invoiceId);
@@ -506,6 +548,14 @@ public class BitPay {
         return i;
     }
 
+    /**
+     * Retrieves a list of all invoices for the calling merchant.
+     *
+     * @param  dateStart        The search start date.
+     * @param  dateEnd          The search end date.
+     * @return invoices         A List object of all invoices found.
+     * @throws BitPayException
+     */
     public List<Invoice> getInvoices(String dateStart, String dateEnd) throws BitPayException
     {
         Hashtable<String, String> parameters = this.getParams();
@@ -529,6 +579,12 @@ public class BitPay {
         return invoices;
     }
 
+    /**
+     * Retrieves the current exchange rates from BitPay.
+     *
+     * @return Rates           A Rates object of updated exchange rate information.
+     * @throws BitPayException
+     */
     public Rates getRates() throws BitPayException
     {
         HttpResponse response = this.get("rates");
@@ -545,7 +601,12 @@ public class BitPay {
 
         return new Rates(rates, this);
     }
-    
+
+    /**
+     * Loads an existing EC keypair or generates new pair.
+     *
+     * @throws IOException
+     */
     private void initKeys() throws IOException
     {
         if (KeyUtils.privateKeyExists()) {
@@ -559,13 +620,24 @@ public class BitPay {
             KeyUtils.saveEcKey(_ecKey);
         }
     }
-    
+
+    /**
+     * Creates a SIN from the public EC key.
+     *
+     * @throws IllegalArgumentException
+     */
     private void deriveIdentity() throws IllegalArgumentException
     {
         // Identity in this implementation is defined to be the SIN.
         _identity = KeyUtils.deriveSIN(_ecKey);
     }
-    
+
+    /**
+     * Returns the next nonce value to use for API calls,
+     * if nonce usage is not disabled.
+     *
+     * @return _nonce A new nonce value
+     */
     private long getNextNonce()
     {
         // Nonce must be 0 when it has been disabled.
@@ -579,7 +651,15 @@ public class BitPay {
 
         return _nonce;
     }
-    
+
+    /**
+     * Populates the token cache from the JSON results
+     * of an API call to the gateway.
+     *
+     * @param  response        The gateway response.
+     * @return _tokenCache     A Hashtable of the token type & value
+     * @throws BitPayException
+     */
     private Hashtable<String, String> responseToTokenCache(HttpResponse response) throws BitPayException
     {
         // The response is expected to be an array of
@@ -604,16 +684,23 @@ public class BitPay {
 
         return _tokenCache;
     }
-    
+
+    /**
+     * Reinitialize the token cache object.
+     */
     private void clearAccessTokenCache() 
     {
         _tokenCache = new Hashtable<String, String>();
     }
 
+    /**
+     * Attempt to get access tokens for this client identity.
+     *
+     * @return boolean         Was at least one token returned?
+     * @throws BitPayException
+     */
     private boolean tryGetAccessTokens() throws BitPayException
     {
-        // Attempt to get access tokens for this client identity.
-
         try {
             // Success if at least one access token was returned.
             return this.getAccessTokens() > 0;
@@ -633,6 +720,12 @@ public class BitPay {
         }
     }
 
+    /**
+     * Populates the token cache with the gateway response.
+     *
+     * @return integer         Size of the token cache.
+     * @throws BitPayException
+     */
     private int getAccessTokens() throws BitPayException
     {
         this.clearAccessTokenCache();
@@ -645,6 +738,13 @@ public class BitPay {
         return _tokenCache.size();
     }
 
+    /**
+     * Checks token cache for a token matching the facade string.
+     *
+     * @param  facade          The requested facade string.
+     * @return token           The matching token value string.
+     * @throws BitPayException
+     */
     private String getAccessToken(String facade) throws BitPayException
     {
         if (!_tokenCache.containsKey(facade)) {
@@ -654,6 +754,12 @@ public class BitPay {
         return _tokenCache.get(facade);
     }
 
+    /**
+     * Populates the params hash table object with a new nonce.
+     *
+     * @return params          The updated params Hashtable object
+     * @throws BitPayException
+     */
     private Hashtable<String, String> getParams() 
     {
         Hashtable<String, String> params = new Hashtable<String, String>();
@@ -663,6 +769,14 @@ public class BitPay {
         return params;
     }
 
+    /**
+     * Executes an HTTP GET request against the gateway.
+     *
+     * @param  uri             The server address to call.
+     * @param  parameters      A hash table of parameters for the call.
+     * @return HttpResponse    The response object from the gateway.
+     * @throws BitPayException
+     */
     private HttpResponse get(String uri, Hashtable<String, String> parameters) throws BitPayException
     {
         try {
@@ -700,11 +814,30 @@ public class BitPay {
         }
     }
 
+    /**
+     * Executes an HTTP GET request against the gateway without
+     * any parameters.
+     *
+     * @param  uri             The server address to call.
+     * @return HttpResponse    The response object from the gateway.
+     * @throws BitPayException
+     */
     private HttpResponse get(String uri) throws BitPayException
     {
         return this.get(uri, null);
     }
 
+    /**
+     * Executes an HTTP POST request against the gateway with parameters
+     * and an additional ECDSA signature. This is required for all non-
+     * public resource API calls.
+     *
+     * @param  uri               The server address to call.
+     * @param  json              A JSON string of parameters for the call.
+     * @param  signatureRequired Whether or not to use a signature.
+     * @return HttpResponse      The response object from the gateway.
+     * @throws BitPayException
+     */
     private HttpResponse post(String uri, String json, boolean signatureRequired) throws BitPayException 
     {
         try {            
@@ -734,16 +867,41 @@ public class BitPay {
         }
     }
 
+    /**
+     * Executes an HTTP POST request against the gateway with parameters.
+     *
+     * @param  uri             The server address to call.
+     * @param  json            A JSON string of parameters for the call.
+     * @return HttpResponse    The response object from the gateway.
+     * @throws BitPayException
+     */
     private HttpResponse post(String uri, String json) throws BitPayException 
     {
         return this.post(uri, json, false);
     }
 
+    /**
+     * Executes an HTTP POST request against the gateway with parameters
+     * and an additional ECDSA signature. This is required for all non-
+     * public resource API calls.
+     *
+     * @param  uri             The server address to call.
+     * @param  json            A JSON string of parameters for the call.
+     * @return HttpResponse    The response object from the gateway.
+     * @throws BitPayException
+     */
     private HttpResponse postWithSignature(String uri, String json) throws BitPayException 
     {
         return this.post(uri, json, true);
     }
 
+    /**
+     * Returns the string value for the JSON payload of the HTTP response object.
+     *
+     * @param  response        The unprocessed HTTP response object.
+     * @return jsonString      The JSON string value from the response.
+     * @throws BitPayException
+     */
     private String responseToJsonString(HttpResponse response) throws BitPayException 
     {
         if (response == null) {
@@ -798,6 +956,12 @@ public class BitPay {
         }
     }
 
+    /**
+     * Generates & returns a new random globally uniqe identifier.
+     * See: http://en.wikipedia.org/wiki/Globally_unique_identifier
+     *
+     * @return string The new GUID value.
+     */
     private String getGuid() 
     {
         int Min = 0;
